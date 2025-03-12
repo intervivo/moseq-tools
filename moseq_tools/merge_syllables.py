@@ -1,14 +1,17 @@
+#!/usr/bin/env python
 import h5py
 import click
 import joblib
 import logging
 import warnings
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from toolz.curried import pluck
 from scipy.ndimage import maximum_filter1d
 from scipy.spatial.distance import pdist, squareform
 from toolz import groupby, compose, partial, valfilter, valmap
+from moseq2_viz.model.util import compute_behavioral_statistics
 
 
 def load_syllables(path: str):
@@ -157,10 +160,70 @@ def to_csv(k_neighbor_map, output_path: str):
     out = Path(output_path) / "merge_candidates.csv"
     logging.info(f"Saving merge candidates to CSV: {out}")
     with open(out, "w") as f:
-        f.write("old_syll,new_syll\n")
+        f.write("labels (original) - old,labels (original) - new\n")
         for k, v in k_neighbor_map.items():
             f.write(f"{k},{v}\n")
     return out
+
+
+def compute_merge_syll_stats(df, merge_map):
+
+    vcs = df.query("onset")["labels (original)"].value_counts(normalize=True)
+
+    for from_syll, to_syll in merge_map.items():
+        logging.info(f"Syllable {from_syll} (usage {vcs[from_syll]:0.4f}) merging into {to_syll} (usage {vcs[to_syll]:0.4f})")
+
+
+def merge_large_dataframe(dataframe_path, merge_map):
+    df = pd.read_csv(dataframe_path, index_col=0)
+
+    compute_merge_syll_stats(df, merge_map)
+
+    label_map = (
+        df[["labels (original)", "labels (usage sort)"]]
+        .drop_duplicates()
+        .set_index("labels (original)")["labels (usage sort)"]
+    )
+    logging.info("Mapping syllable labels")
+
+    df["new labels (original)"] = df["labels (original)"].replace(merge_map)
+    df["new labels (usage sort)"] = df["new labels (original)"].map(label_map)
+
+    logging.info(f"Percent similar after merge: {(df['new labels (original)'] == df['labels (original)']).mean() * 100}")
+    logging.info(f"Percent similar after merge (sorted): {(df['new labels (usage sort)'] == df['labels (usage sort)']).mean() * 100}")
+
+    return df
+
+
+def make_resample_plots(data, merge_map, output_path, max_width=3000):
+    import matplotlib.pyplot as plt
+
+    folder = Path(output_path) / "resample_plots"
+    folder.mkdir(parents=True, exist_ok=True)
+
+    for k, v in merge_map.items():
+        mask = np.any(data == k, axis=0)
+        to_plt = data[:, mask]
+        if to_plt.shape[1] > max_width:
+            mask = np.where(np.any(to_plt == v, axis=0))[0]
+            idx = np.concatenate([np.arange(max_width - len(mask)), mask])
+            to_plt = to_plt[:, idx]
+        to_plt = (to_plt == k) * 1 + (to_plt == v) * 2
+        fig = plt.figure()
+        plt.imshow(to_plt, aspect='auto', cmap="cubehelix")
+        cb = plt.colorbar(label="Syllable")
+        cb.set_ticks([0, 1, 2])
+        cb.set_ticklabels(["other", k, v])
+        plt.title(f"Syllable {k} merging into {v}")
+        fig.tight_layout()
+        fig.savefig(folder / f"syllable_{k}_merging_{v}.png", dpi=300)
+        plt.close(fig)
+        
+
+
+def print_and_log(statement):
+    print(statement)
+    logging.info(statement)
 
 
 @click.command()
@@ -184,8 +247,26 @@ def to_csv(k_neighbor_map, output_path: str):
     type=click.Path(dir_okay=True, exists=False),
     help="Folder to save output",
 )
+@click.option(
+    "--merge-mode",
+    type=click.Choice(["info", "auto"]),
+    default="info",
+    help="Mode for determining merge candidates. 'info' only shows information, 'auto' performs merging",
+)
+@click.option(
+    "--dataframe-path",
+    default=None,
+    type=click.Path(dir_okay=False, exists=True),
+    help="Path to moseq_df.csv dataframe of syllable labels. Required if merge-mode is 'auto'",
+)
 def main(
-    model_resample_path, pc_scores_path, max_syllable_labels, ent_thresh, output_path
+    model_resample_path,
+    pc_scores_path,
+    max_syllable_labels,
+    ent_thresh,
+    output_path,
+    merge_mode,
+    dataframe_path,
 ):
     """
     Args:
@@ -193,6 +274,8 @@ def main(
     """
     log_path = Path(output_path) / "merge_syllables.log"
     logging.basicConfig(level=logging.INFO, filename=log_path, filemode="w")
+    logging.info(f"Running merge-syllables.py with merge-mode: {merge_mode}")
+
     uuids, data = load_syllables(model_resample_path)
     pcs = load_pcs(pc_scores_path, uuids)
 
@@ -230,11 +313,49 @@ def main(
         k: list(filter(partial(is_similar, k), v)) for k, v in k_neighbors.items()
     }
     k_neighbors = valfilter(len, k_neighbors)
-    k_neighbor_map = {int(k): int(v[0]) for k, v in k_neighbors.items()}
-    logging.info(f"Final set of merge candidates has {len(k_neighbor_map)} candidates")
 
-    save_path = to_csv(k_neighbor_map, output_path)
-    print(f"Saved merge candidates to {save_path}")
+    merge_map = {int(k): int(v[0]) for k, v in k_neighbors.items()}
+    logging.info(f"Final set of merge candidates has {len(merge_map)} candidates")
+
+    for from_syll, to_syll in merge_map.items():
+        logging.info(f"Syllable {from_syll} (pc similarity {pc_similarity[from_syll, to_syll]:0.4f}) merging into {to_syll}")
+
+    save_path = to_csv(merge_map, output_path)
+    print_and_log(f"Saved merge candidates to {save_path}")
+
+    logging.info("Making resample plots")
+    make_resample_plots(filtered_data, merge_map, output_path)
+
+    # step 1: re-write main dataframe
+    if merge_mode == "auto":
+        folder = Path(dataframe_path).parent
+        print_and_log("Merging syllables in dataframe")
+
+        df = merge_large_dataframe(dataframe_path, merge_map)
+        df.to_csv(folder / "moseq_df_merged.csv")
+
+        logging.info("Recomputing behavioral statistics dataframes")
+        stats_df = compute_behavioral_statistics(
+            df,
+            count="usage",
+            syllable_key="new labels (usage sort)",
+            usage_normalization=True,
+            groupby=["group", "uuid"],
+        )
+
+        stats_df_orig_labels = compute_behavioral_statistics(
+            df,
+            count="usage",
+            syllable_key="new labels (original)",
+            usage_normalization=True,
+            groupby=["group", "uuid"],
+        )
+
+        stats_df.to_csv(folder / "moseq_df_stats_merged.csv")
+        stats_df_orig_labels.to_csv(folder / "moseq_df_orig_label_stats_merged.csv")
+        print_and_log("Saved behavioral statistics dataframes")
+    
+    print_and_log("Finished")
 
 
 if __name__ == "__main__":

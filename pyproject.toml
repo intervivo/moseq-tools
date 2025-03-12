@@ -24,3 +24,6 @@ apply_path = "moseq_tools.config:apply_path"
 merge-syllables = "moseq_tools.merge_syllables:main"
 detect-empty-frames = "moseq_tools.detect_empty_frames:main"
 cosine-dist="moseq_tools.cosine_dist:main"
+frame-flip-qc="moseq_tools.frame_flip_qc:main"
+slice-dataframe="moseq_tools.slice_dataframe:main"
+

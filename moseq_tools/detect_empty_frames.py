@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import h5py
 import click
 import shutil
