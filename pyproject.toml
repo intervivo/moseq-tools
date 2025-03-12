@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moseq_tools"
+version = "0.2.1"
+description = "MoSEQ utilities"
+dependencies = [
+    "pyyaml",
+    "ruamel.yaml",
+    "click",
+    "h5py",
+    "joblib",
+    "numpy",
+    "toolz",
+    "scipy",
+    "pandas",
+    "tqdm"
+]
+
+[project.scripts]
+apply_path = "moseq_tools.config:apply_path"
+merge-syllables = "moseq_tools.merge_syllables:main"
+detect-empty-frames = "moseq_tools.detect_empty_frames:main"
+cosine-dist="moseq_tools.cosine_dist:main"
