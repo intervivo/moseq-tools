@@ -7,8 +7,9 @@ import logging
 import subprocess
 import numpy as np
 from pathlib import Path
-from pprint import pformat
 
+def _dict_to_str(d: dict):
+    return "\n".join([f"{k}: {v}" for k, v in d.items()])
 
 def flip_frames(files, flip_qc_folder):
     for file in files:
@@ -60,7 +61,7 @@ def compare_syllable_similarity(original_model_file, flipped_model_file):
 
     per_syllable_similarity = dict(sorted(per_syllable_similarity.items(), key=lambda item: item[1], reverse=True))
     logging.info("Per-syllable similarity:")
-    logging.info(pformat(per_syllable_similarity, sort_dicts=False))
+    logging.info(_dict_to_str(per_syllable_similarity))
 
     return per_syllable_similarity, avg_similarity
 
@@ -150,7 +151,7 @@ def main(aggregate_folder, flip_qc_folder, pca_folder, model_file):
     print(f"% of matching syllable IDs: {avg_similarity:.0f}%")
 
     print("Per-syllable matching %:")
-    print(pformat(results, sort_dicts=False))
+    print(_dict_to_str(results))
 
     # step 5: save results
     with open(Path(flip_qc_folder) / "frame_flip_qc_results.txt", "w") as f:
