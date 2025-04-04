@@ -26,4 +26,4 @@ detect-empty-frames = "moseq_tools.detect_empty_frames:main"
 cosine-dist="moseq_tools.cosine_dist:main"
 frame-flip-qc="moseq_tools.frame_flip_qc:main"
 slice-dataframe="moseq_tools.slice_dataframe:main"
-
+hd5_extract="moseq_tools.hd5_extract:main"
