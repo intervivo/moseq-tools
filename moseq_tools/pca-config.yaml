@@ -1,0 +1,105 @@
+# MoSeq2 Configuration File
+# This YAML file contains all CLI options merged from modeling and compression parameters
+
+# ==============================================================================
+# FILE I/O PARAMETERS (PCA steps)
+# ==============================================================================
+index: ""                             # Path to moseq2-index.yaml for group definitions
+output_dir: "_pca"
+
+# H5 File Paths and Structure
+h5_path: "/frames"                    # Path to data in h5 files
+h5_mask_path: "/frames_mask"          # Path to log-likelihood mask in h5 files
+pca_path: "/components"               # Path to pca components in h5 file
+
+# Output Files
+output_file: "pca"                    # Name of h5 file for storing results
+pca_file: null                        # Path to PCA results
+pca_file_components: null             # Path to PCA components
+pca_file_scores: null                 # Path to PCA results
+
+# ==============================================================================
+# DATA PROCESSING PARAMETERS (PCA steps)
+# ==============================================================================
+chunk_size: 4000                     # Number of frames per chunk
+fps: 30                               # Frames per second (frame rate)
+fill_gaps: true                       # Fill dropped frames with nans
+detrend_window: 0                     # Length of detrend window (in seconds, 0 for no detrending)
+
+# Mouse Height Filtering
+min_height: 10                        # Min mouse height from floor (mm)
+max_height: 120                       # Max mouse height from floor (mm)
+mask_height_threshold: 5              # Threshold for mask based on floor height
+
+# ==============================================================================
+# FILTERING PARAMETERS (PCA steps)
+# ==============================================================================
+# Gaussian Filters
+gaussfilter_space: [2.25, 1.5]        # x, y sigma for kernel in Spatial filter (Gaussian)
+gaussfilter_time: 0                   # sigma for temporal filter (Gaussian)
+
+# Median Filters
+medfilter_space: 0                    # kernel size for median spatial filter
+medfilter_time: 0                     # kernel size for median temporal filter
+
+# Tail Filter
+tailfilter_size: [15, 15]             # Tail filter size
+tailfilter_shape: "ellipse"           # Tail filter shape
+
+# Other Processing Options
+use_fft: false                        # Use 2D fft
+nan_zeroed_frames: true               # Flag that discards frames without a mouse
+
+# ==============================================================================
+# PCA PARAMETERS
+# ==============================================================================
+npcs: 10                              # Number of PCs to use
+rank: 15                              # Rank for compressed SVD
+train_on_subset: 1                    # Fraction of total frames PCA is trained on
+whiten: "all"                         # Whiten PCs: (e)each session (a)ll combined or (n)o whitening
+
+# Missing Data PCA
+missing_data: false                   # Use missing data PCA
+missing_data_iters: 10                # Number of missing data PCA iterations
+mask_threshold: -16                   # Threshold for mask (missing data PCA only)
+recon_pcs: 10                         # Number of PCs to use for missing data reconstruction
+
+# Overwrite Settings
+overwrite_pca_train: true             # Bypass PCA overwrite question for training
+overwrite_pca_apply: true             # Bypass PCA overwrite question for application
+
+# ==============================================================================
+# CHANGEPOINT DETECTION PARAMETERS
+# ==============================================================================
+neighbors: 1                          # Neighbors to use for peak identification
+threshold: 0.5                        # Peak threshold to use for changepoints
+klags: 6                              # Lag to use for derivative calculation
+sigma: 3.5                            # Standard deviation of gaussian smoothing filter
+dims: 150                             # Number of random projections to use
+
+# ==============================================================================
+# COMPUTE ENVIRONMENT PARAMETERS
+# ==============================================================================
+# Cluster Settings
+cluster_type: "local"                 # Compute environment: local, slurm, or nodask
+queue: "debug"                        # Cluster queue/partition for submitting jobs
+timeout: 5                            # Time to wait for workers to initialize (minutes)
+
+# Resource Allocation
+nworkers: 1                           # Number of workers
+cores: 1                              # Number of cores per worker
+processes: 1                          # Number of processes to run on each worker
+memory: "15GB"                        # Total RAM usage per worker
+wall_time: "06:00:00"                 # Wall time (compute time) for workers
+
+# Dask Configuration
+dask_port: "8787"                     # Port to access dask dashboard
+dask_cache_path: "_pca"         # Path to spill data to disk for dask
+local_processes: false                # Use processes (True) or threads (False) with local cluster
+
+# ==============================================================================
+# OTHER PARAMETERS
+# ==============================================================================
+camera_type: "azure"                  # Camera type (k2 or azure)
+verbose: false                        # Print verbose output
+progressbar: true                     # Show model progress
