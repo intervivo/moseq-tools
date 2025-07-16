@@ -30,3 +30,6 @@ hd5_extract="moseq_tools.hd5_extract:main"
 generate_moseq_configs="moseq_tools.generate_moseq_configs:cli"
 merge_treatments="moseq_tools.merge_treatments:main"
 merge_treatment_from_yaml="moseq_tools.merge_treatment_from_yaml:main"
+
+[tool.setuptools.package-data]
+moseq_tools = ["pca-config.yaml"]
