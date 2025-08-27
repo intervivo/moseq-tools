@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -19,6 +19,15 @@ dependencies = [
     "tqdm"
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["moseq_tools*"]
+
+# Put data files *inside* the package and list them here:
+[tool.setuptools.package-data]
+"moseq_tools" = ["data/*.yaml"]
+
+
 [project.scripts]
 apply_path = "moseq_tools.config:apply_path"
 merge-syllables = "moseq_tools.merge_syllables:main"
@@ -31,5 +40,3 @@ generate_moseq_configs="moseq_tools.generate_moseq_configs:cli"
 merge_treatments="moseq_tools.merge_treatments:main"
 merge_treatment_from_yaml="moseq_tools.merge_treatment_from_yaml:main"
 
-[tool.setuptools.package-data]
-moseq_tools = ["pca-config.yaml"]
