@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from importlib.resources import files
+import importlib.resources as pkg_resources
+from pathlib import Path
 import click
 import shutil
 import ruamel.yaml as yaml
@@ -10,10 +11,11 @@ import ruamel.yaml as yaml
 def cli():
     pass
 
+
 def load_schema(filename):
-    resource = files("moseq_tools.data") / filename
-    with resource.open("r") as f:
-        data = yaml.YAML(typ='safe', pure=True)
+    # open_text returns a file-like object from inside the package
+    with pkg_resources.open_text("moseq_tools.data", filename) as f:
+        data = yaml.YAML(typ="safe", pure=True)
         return data.load(f)
 
 @cli.command("extract")
@@ -35,10 +37,10 @@ def generate_extraction_config(flip_classifier_path, output_path):
 @click.option("--output-path", type=click.Path(), default="pca-config.yaml", help="Path to save the generated PCA configuration.")
 def generate_model_config(output_path):
     """Generates configuration file for `moseq2-pca`."""
-    resource = files("moseq_tools.data") / "pca-config.yaml"
-    config_path = resource.locate()
-    shutil.copyfile(config_path, output_path)
+    with pkg_resources.path("moseq_tools.data", "pca-config.yaml") as p:
+        config_path = Path(p)
 
+    shutil.copyfile(config_path, output_path)
     print(f"PCA configuration saved to {output_path}")
 
 
