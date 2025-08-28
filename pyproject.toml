@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "moseq_tools"
-version = "0.2.6"
+version = "0.2.7"
 description = "MoSEQ utilities"
 dependencies = [
     "pyyaml",
